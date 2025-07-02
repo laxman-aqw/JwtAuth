@@ -46,22 +46,30 @@ namespace JwtAuth.Controllers
             return Ok(new { token, message = "Login successful", success = true });
         }
 
-        private string CreateToken(User user) {
+        private string CreateToken(User user)
+        {
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.Username)
-            };
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("AppSettings:Token")!));
+    {
+        new Claim(ClaimTypes.Name, user.Username),
+    };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                _configuration["AppSettings:Token"]!));
+
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
             var token = new JwtSecurityToken(
-                issuer: _configuration.GetValue<string>("AppSettings:Audience"),
+                issuer: _configuration["AppSettings:Issuer"],
+                audience: _configuration["AppSettings:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddDays(1),
                 signingCredentials: creds
-                );
+            );
+
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-        
+
+
     }
 
 
