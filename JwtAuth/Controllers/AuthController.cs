@@ -3,6 +3,10 @@ using JwtAuth.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace JwtAuth.Controllers
 {
@@ -10,7 +14,15 @@ namespace JwtAuth.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+
         public static User user = new();
+
+        private readonly IConfiguration _configuration;
+        public AuthController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         [HttpPost("register")]
         public ActionResult<User> Register(UserDto request) {
             var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
@@ -29,9 +41,25 @@ namespace JwtAuth.Controllers
                 return BadRequest(new { message = "Invalid password", success = false });
             }
 
-            string token = "success";
+            string token = CreateToken(user);
 
             return Ok(new { token, message = "Login successful", success = true });
+        }
+
+        private string CreateToken(User user) {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("AppSettings:Token")!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var token = new JwtSecurityToken(
+                issuer: _configuration.GetValue<string>("AppSettings:Audience"),
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(1),
+                signingCredentials: creds
+                );
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
         
     }
