@@ -12,11 +12,29 @@ namespace JwtAuth.Controllers
     {
         public static User user = new();
         [HttpPost("register")]
-        public ActionResult<User> RegisterUser(UserDto request) {
+        public ActionResult<User> Register(UserDto request) {
             var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
             user.Username = request.Username;
             user.PasswordHash = hashedPassword;
             return Ok(new { message="user registered succesfully",success=true,user });
         }
+
+        [HttpPost("Login")]
+        public ActionResult<string> Login(UserDto request) { 
+            if(user.Username != request.Username)
+            {
+                return BadRequest(new { message = "User not found", success = false });
+            }
+            if( new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password)==PasswordVerificationResult.Failed){
+                return BadRequest(new { message = "Invalid password", success = false });
+            }
+
+            string token = "success";
+
+            return Ok(new { token, message = "Login successful", success = true });
+        }
+        
     }
+
+
 }
