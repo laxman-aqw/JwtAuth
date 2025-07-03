@@ -1,5 +1,6 @@
 ﻿using JwtAuth.Entities;
 using JwtAuth.Models;
+using JwtAuth.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace JwtAuth.Controllers
 {
@@ -17,56 +19,31 @@ namespace JwtAuth.Controllers
 
         public static User user = new();
 
-        private readonly IConfiguration _configuration;
-        public AuthController(IConfiguration configuration)
+        private readonly IAuthService _authService;
+        public AuthController(IAuthService authService)
         {
-            _configuration = configuration;
+            _authService = authService;
         }
 
         [HttpPost("register")]
-        public ActionResult<User> Register(UserDto request) {
-            var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
-            user.Username = request.Username;
-            user.PasswordHash = hashedPassword;
+        public async Task<ActionResult<User>> Register(UserDto request) {
+           var user =  await _authService.RegisterAsync(request);
+            if(user == null)
+            {
+                return BadRequest(new { message = "User already exists", success = false });
+            }
             return Ok(new { message="user registered succesfully",success=true,user });
         }
 
         [HttpPost("Login")]
-        public ActionResult<string> Login(UserDto request) { 
-            if(user.Username != request.Username)
+        public async Task<ActionResult<string>> Login(UserDto request) {
+            var token = await _authService.LoginAsync(request);
+            if(token == null)
             {
-                return BadRequest(new { message = "User not found", success = false });
+                return BadRequest(new { message="invalid username or password", success=false });
             }
-            if( new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password)==PasswordVerificationResult.Failed){
-                return BadRequest(new { message = "Invalid password", success = false });
-            }
-
-            string token = CreateToken(user);
 
             return Ok(new { token, message = "Login successful", success = true });
-        }
-
-        private string CreateToken(User user)
-        {
-            var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, user.Username),
-    };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["AppSettings:Token"]!));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["AppSettings:Issuer"],
-                audience: _configuration["AppSettings:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(1),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
 
