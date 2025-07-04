@@ -37,14 +37,14 @@ namespace JwtAuth.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<ActionResult<string>> Login(UserDto request) {
-            var token = await _authService.LoginAsync(request);
-            if(token == null)
+        public async Task<ActionResult<TokenResponseDto>> Login(UserDto request) {
+            var result = await _authService.LoginAsync(request);
+            if(result == null)
             {
                 return BadRequest(new { message="invalid username or password", success=false });
             }
 
-            return Ok(new { token, message = "Login successful", success = true });
+            return Ok(new { result, message = "Login successful", success = true });
         }
 
         [Authorize]
@@ -59,6 +59,17 @@ namespace JwtAuth.Controllers
         {
             return Ok(new { message = "You are an admin", success = true });
         }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request) { 
+            var result = await _authService.RefreshTokenAsync(request);
+            if(result == null || result.AccessToken == null || result.RefreshToken == null)
+            {
+                return BadRequest(new { message = "Invalid refresh token", success = false });
+            }
+            return Ok(new { result, message = "Refresh token successful", success = true });
+        }
+
 
     }
 
