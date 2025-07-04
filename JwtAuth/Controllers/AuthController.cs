@@ -1,6 +1,7 @@
 ﻿using JwtAuth.Entities;
 using JwtAuth.Models;
 using JwtAuth.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,18 @@ namespace JwtAuth.Controllers
             return Ok(new { token, message = "Login successful", success = true });
         }
 
+        [Authorize]
+        [HttpGet]
+        public IActionResult AuthenticatedOnlyEndPoint() { 
+            return Ok(new { message = "You are authenticated", success = true });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin")]
+        public IActionResult AdminOnlyEndPoint()
+        {
+            return Ok(new { message = "You are an admin", success = true });
+        }
 
     }
 
